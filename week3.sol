@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 contract Multisig {
 
     mapping(address => bool) whitelisted;
+    maping(address => uint256) balances;
 
     constructor{
         address user1= address(0x1)
@@ -15,6 +16,7 @@ contract Multisig {
     function deposit() payable external{
 
         require(msg.value > 0,"zero cant be deposited");
+        balances[msg.sender]+=msg.value;
         
     }
 
