@@ -1,39 +1,47 @@
 pragma solidity 0.8.17;
 
-contract Multisig {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    mapping(address => bool) whitelisted;
-    maping(address => uint256) balances;
+contract Multisig{
 
-    constructor{
-        address user1= address(0x1)
-        address user2= address(0x2)
+    error Unauthorized();
+    error InvalidInput();
 
-        whitelisted[msg.sender]= true;
-        whitelisted[user2]= true;
-    }
-
-    function deposit() payable external{
-
-        require(msg.value > 0,"zero cant be deposited");
-        balances[msg.sender]+=msg.value;
-        
-    }
-
-    modifier onlyWhitelisted() {
-        require(whitelisted[msg.sender] == true,"Not whitelisted");
-        _;
-    }
-
-    function withdraw(uint amount) external onlyWhitelisted{
-        require(address(this.balance) > 0,"wallet is empty");
-        require(amount > 0,"zero cant be withdrawn");
-        
-        (bool success,) = msg.sender.send(amount);
-        require(success,"Transaction failed");
-        
-    }
-
-    receive() payable {}
+    address private admin;
+    IERC20 public iERC;
     
+    struct Transaction{
+        address token;
+        uint amount;
+        address sender;
+        address approver;
+        address receiver;
+        bool txComplete;
+    }
+    //uint => transaction id
+    //Transaction => struct
+    mapping(uint => Transaction) transactionDetails;
+    mapping(address => bool) owners;
+    mapping(address => bool) acceptedTokens;
+    constructor(address _owner2){
+        admin= msg.sender;
+        owners[admin]= true;
+        owners[_owner2]= true;
+    }
+
+    modifier whitelisted{
+        if(owners[msg.sender] != true){
+            revert Unauthorized();
+        }
+    }
+
+    function setTokens(address tokenAddress) external whitelisted {
+        if(tokenAddress==address(0)){
+            revert InvalidInput();
+        }
+        acceptedTokens[tokenAddress]=true;
+        iERC=IERC20(tokenAddress);
+
+        
+    }
 }
