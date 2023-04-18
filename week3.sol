@@ -9,6 +9,8 @@ contract Multisig{
 
     address private admin;
     IERC20 public iERC;
+
+    uint256 counter;
     
     struct Transaction{
         address token;
@@ -23,6 +25,8 @@ contract Multisig{
     mapping(uint => Transaction) transactionDetails;
     mapping(address => bool) owners;
     mapping(address => bool) acceptedTokens;
+
+    event TransactionInititated(address tokenAddress,address from, address to, uint256 amount);
     constructor(address _owner2){
         admin= msg.sender;
         owners[admin]= true;
@@ -32,6 +36,7 @@ contract Multisig{
     modifier whitelisted{
         if(owners[msg.sender] != true){
             revert Unauthorized();
+            _;
         }
     }
 
@@ -44,4 +49,37 @@ contract Multisig{
 
         
     }
+
+    function deposit(uint amount) external {
+        if(amount ==0){
+            revert InvalidInput();
+        }
+        require(iERC.balanceOf(msg.sender) > 0,"Zero tokens cant be depositted");
+        iERC.transferFrom(msg.sender,address(this),amount);
+    }
+
+    function InitiateWithdraw(address tokenAddress,address _to, uint _amount) external whitelisted {
+        require(acceptedTokens[tokenAddress],"Not an accepted token");
+        uint _id = ++counter;
+        Transaction storage txinit = transactionDetails[_id];
+        txinit.token =  tokenAddress;
+        txinit.amount =   _amount;
+        txinit.sender = msg.sender;
+        txinit.receiver = _to;
+
+        emit TransactionInititated(tokenAddress,msg.sender, _to, _amount);
+
+    }
+
+    function completeWithdraw(uint _id) external whitelisted{
+        require(_id > 0,"Invalid id");
+
+        Transaction storage txcompletion = transactionDetails[_id];
+        address treceiver = txcompletion.receiver;
+        uint amont = txcompletion.amount;
+
+        iERC.transfer(treceiver,amont);
+        txcompletion.txComplete=true;
+    }
 }
+
